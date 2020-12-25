@@ -264,8 +264,11 @@ class BLevel {
   class Iter {
    public:
     Iter(const BLevel* blevel)
-      : blevel_(blevel), entry_idx_(0), range_end_(blevel->ranges_[0].entries),
-        range_(0), locked_(false)
+      : blevel_(blevel), entry_idx_(0),
+#ifdef BRANGE
+        range_end_(blevel->ranges_[0].entries), range_(0),
+#endif
+        locked_(false)
     {
 #ifndef NO_LOCK
       blevel_->lock_[entry_idx_].lock_shared();
@@ -397,8 +400,11 @@ class BLevel {
   class NoSortIter {
    public:
     NoSortIter(const BLevel* blevel)
-      : blevel_(blevel), entry_idx_(0), range_end_(blevel->ranges_[0].entries),
-        range_(0), locked_(false)
+      : blevel_(blevel), entry_idx_(0),
+#ifdef BRANGE
+        range_end_(blevel->ranges_[0].entries), range_(0),
+#endif
+        locked_(false)
     {
 #ifndef NO_LOCK
       blevel_->lock_[entry_idx_].lock_shared();
@@ -522,8 +528,10 @@ class BLevel {
     BLevel::Entry::NoSortIter iter_;
     const BLevel* blevel_;
     uint64_t entry_idx_;
+#ifdef BRANGE
     uint64_t range_end_;
     int range_;
+#endif
     bool locked_;
   };
 

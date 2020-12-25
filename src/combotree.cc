@@ -242,6 +242,10 @@ bool ComboTree::Put(uint64_t key, uint64_t value) {
       ret = true;
       break;
     } else if (status_.load(std::memory_order_acquire) == State::PREPARE_EXPANDING) {
+#ifndef BRANGE
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      wait++;
+#else
       if (need_sleep_) {
         std::unique_lock<std::mutex> lock(BLevel::expand_wait_lock);
         if (need_sleep_ && sleeped_threads_ < EXPAND_THREADS) {
@@ -256,6 +260,7 @@ bool ComboTree::Put(uint64_t key, uint64_t value) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         wait++;
       }
+#endif
       continue;
     } else if (status_.load(std::memory_order_acquire) == State::COMBO_TREE_EXPANDING) {
 #ifndef BRANGE
@@ -311,6 +316,7 @@ bool ComboTree::Update(uint64_t key, uint64_t value) {
       if (!ret) continue;
       break;
     } else if (status_.load(std::memory_order_acquire) == State::PREPARE_EXPANDING) {
+#ifdef BRANGE
       if (need_sleep_) {
         std::unique_lock<std::mutex> lock(BLevel::expand_wait_lock);
         if (need_sleep_ && sleeped_threads_ < EXPAND_THREADS) {
@@ -325,6 +331,10 @@ bool ComboTree::Update(uint64_t key, uint64_t value) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         wait++;
       }
+#else
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      wait++;
+#endif
       continue;
     } else if (status_.load(std::memory_order_acquire) == State::COMBO_TREE_EXPANDING) {
 #ifndef BRANGE

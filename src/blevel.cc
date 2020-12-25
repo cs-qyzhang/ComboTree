@@ -281,8 +281,10 @@ void BLevel::ExpandPut_(ExpandData& data, uint64_t key, uint64_t value) {
       data.entry_key = key;
     } else {
       Entry* entry = data.new_addr - 1;
+#ifdef BRANGE
       uint64_t entry_idx = ranges_[data.target_range].physical_entry_start+ranges_[data.target_range].entries-1;
       std::lock_guard<std::shared_mutex> lock(lock_[entry_idx]);
+#endif
       for (int i = 0; i < data.buf_count; ++i)
         entry->Put(&clevel_mem_, data.key_buf[i], data.value_buf[BLEVEL_EXPAND_BUF_KEY-i-1]);
       data.buf_count = 0;
@@ -306,8 +308,10 @@ void BLevel::ExpandFinish_(ExpandData& data) {
       data.expanded_entries->fetch_add(1, std::memory_order_release);
     } else {
       Entry* entry = data.new_addr - 1;
+#ifdef BRANGE
       uint64_t entry_idx = ranges_[data.target_range].physical_entry_start+ranges_[data.target_range].entries-1;
       std::lock_guard<std::shared_mutex> lock(lock_[entry_idx]);
+#endif
       for (int i = 0; i < data.buf_count; ++i)
         entry->Put(&clevel_mem_, data.key_buf[i], data.value_buf[BLEVEL_EXPAND_BUF_KEY-i-1]);
       data.buf_count = 0;
@@ -794,8 +798,16 @@ void BLevel::PrefixCompression() const {
   uint64_t cnt[9];
   for (int i = 0; i < 9; ++i)
     cnt[i] = 0;
+#ifdef BRANGE
+  for (int i = 0; i < EXPAND_THREADS; ++i) {
+    for (int j = ranges_[i].physical_entry_start; j < ranges_[i].physical_entry_start + ranges_[i].entries; ++j) {
+      cnt[entries_[j].buf.suffix_bytes]++;
+    }
+  }
+#else
   for (uint64_t i = 0; i < Entries(); ++i)
     cnt[entries_[i].buf.suffix_bytes]++;
+#endif
   for (int i = 1; i < 9; ++i)
     std::cout << "suffix " << i << " count: " << cnt[i] << std::endl;
 }
