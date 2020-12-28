@@ -29,9 +29,9 @@ ComboTree::ComboTree(std::string pool_dir, size_t pool_size, bool create)
   std::cout << "EXPAND_THREADS:        " << EXPAND_THREADS << std::endl;
 #else
   std::cout << "BRANGE = 0" << std::endl;
+#endif
 #ifdef BACKGROUD_EXPAND
   std::cout << "BACKGROUD_EXPAND = 1" << std::endl;
-#endif
 #endif
   std::cout << "BLEVEL_EXPAND_BUF_KEY: " << BLEVEL_EXPAND_BUF_KEY << std::endl;
   std::cout << "EXPANSION_FACTOR:      " << EXPANSION_FACTOR << std::endl;
@@ -155,7 +155,7 @@ void ComboTree::ExpandComboTree_() {
 
   permit_delete_.store(false);
   sleeped_threads_.store(1);
-  need_sleep_.store(true);
+  need_sleep_.store(sleeped_threads_ < EXPAND_THREADS);
 
   // old_blevel_ is set when last expanding finish.
   blevel_ = new BLevel(old_blevel_->Size());
@@ -183,8 +183,8 @@ void ComboTree::ExpandComboTree_() {
     old_blevel_ = blevel_;
   }
 
-  s = State::COMBO_TREE_EXPANDING;
-  if (!status_.compare_exchange_strong(s, State::USING_COMBO_TREE, std::memory_order_release))
+  State tmp = State::COMBO_TREE_EXPANDING;
+  if (!status_.compare_exchange_strong(tmp, State::USING_COMBO_TREE, std::memory_order_release))
     assert(0);
 
   expand_time += timer.End();
