@@ -1,3 +1,5 @@
+#undef NDEBUG
+
 #include <iostream>
 #include "../src/blevel.h"
 #include "../src/config.h"
