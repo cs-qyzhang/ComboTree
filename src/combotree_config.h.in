@@ -38,3 +38,6 @@
 #if defined(BRANGE) && !defined(EXPAND_THREADS)
 #define EXPAND_THREADS        @EXPAND_THREADS@
 #endif
+#if defined(BRANGE) && EXPAND_THREADS == 0
+#undef BRANGE
+#endif
