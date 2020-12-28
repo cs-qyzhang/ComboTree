@@ -157,9 +157,6 @@ void ComboTree::ExpandComboTree_() {
   sleeped_threads_.store(1);
   need_sleep_.store(true);
 
-  Timer timer;
-  timer.Start();
-
   // old_blevel_ is set when last expanding finish.
   blevel_ = new BLevel(old_blevel_->Size());
   blevel_->PrepareExpansion(old_blevel_);
@@ -167,6 +164,12 @@ void ComboTree::ExpandComboTree_() {
   s = State::PREPARE_EXPANDING;
   if (!status_.compare_exchange_strong(s, State::COMBO_TREE_EXPANDING, std::memory_order_release))
     assert(0);
+
+#ifdef BACKGROUD_EXPAND
+  std::thread t([&](){
+#endif
+  Timer timer;
+  timer.Start();
 
   blevel_->Expansion(old_blevel_);
 
@@ -188,6 +191,10 @@ void ComboTree::ExpandComboTree_() {
   permit_delete_.store(true);
 
   LOG(Debug::INFO, "finish expanding combotree. current size is %ld, current entry count is %ld, expansion time is %lfs", Size(), blevel_->Entries(), (double)expand_time/1000000.0);
+#ifdef BACKGROUD_EXPAND
+  });
+  t.detach();
+#endif
 
 #else // BRANGE
 
@@ -197,9 +204,6 @@ void ComboTree::ExpandComboTree_() {
 
   permit_delete_.store(false);
 
-#ifdef BACKGROUD_EXPAND
-  std::thread t([&](){
-#endif
   Timer timer;
   timer.Start();
 
@@ -224,10 +228,6 @@ void ComboTree::ExpandComboTree_() {
   permit_delete_.store(true);
 
   LOG(Debug::INFO, "finish expanding combotree. current size is %ld, current entry count is %ld, expansion time is %lfs", Size(), blevel_->Entries(), (double)expand_time/1000000.0);
-#ifdef BACKGROUD_EXPAND
-  });
-  t.detach();
-#endif
 #endif // BRANGE
 }
 
