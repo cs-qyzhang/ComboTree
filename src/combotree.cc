@@ -38,6 +38,8 @@ ComboTree::ComboTree(std::string pool_dir, size_t pool_size, bool create)
   std::cout << "PMEMKV_THRESHOLD:      " << PMEMKV_THRESHOLD << std::endl;
   std::cout << "ENTRY_SIZE_FACTOR:     " << ENTRY_SIZE_FACTOR << std::endl;
   std::cout << "DEFAULT_SPAN:          " << DEFAULT_SPAN << std::endl;
+  std::cout << "FLUSH_METHOD:          " << FLUSH_METHOD << std::endl;
+  std::cout << "FENCH_METHOD:          " << FENCE_METHOD << std::endl;
 
 #ifdef USE_LIBPMEM
   std::cout << "USE_LIBPMEM = 1" << std::endl;

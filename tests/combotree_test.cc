@@ -20,6 +20,10 @@ int main(void) {
   ComboTree* tree = new ComboTree("/mnt/pmem0/", (1024*1024*512UL), true);
 #endif
 
+#ifdef NDEBUG
+static_assert(0, "NDEBUG!");
+#endif // NDEBUG
+
   std::cout << "TEST_SIZE:             " << TEST_SIZE << std::endl;
 
   std::vector<uint64_t> key;
