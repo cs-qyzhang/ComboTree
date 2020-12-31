@@ -102,9 +102,9 @@ void BLevel::ExpandData::FlushToEntry(Entry* entry, int prefix_len, CLevel::MemC
   for (int i = 0; i < buf_count; ++i)
     memcpy(entry->buf.pkey(i), &key_buf[i], 8 - prefix_len);
   entry->buf.entries = buf_count;
-  flush(entry);
-  flush((uint8_t*)entry+64);
-  fence();
+  cacheline_flush(entry);
+  cacheline_flush((uint8_t*)entry+64);
+  memory_fence();
 #endif // STREAMING_STORE
 
   buf_count = 0;
@@ -139,8 +139,8 @@ bool BLevel::Entry::Put(CLevel::MemControl* mem, uint64_t key, uint64_t value) {
   // already in, update
   if (exist) {
     *(uint64_t*)buf.pvalue(pos) = value;
-    flush(buf.pvalue(pos));
-    fence();
+    cacheline_flush(buf.pvalue(pos));
+    memory_fence();
     return false;
   } else {
     if (buf.Full()) {

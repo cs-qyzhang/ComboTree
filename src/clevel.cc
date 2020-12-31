@@ -25,8 +25,8 @@ CLevel::Node* CLevel::Node::Put(MemControl* mem, uint64_t key, uint64_t value, N
     int pos = leaf_buf.Find(key, exist);
     if (exist) {
       *(uint64_t*)leaf_buf.sort_pvalue(pos) = value;
-      flush(leaf_buf.sort_pvalue(pos));
-      fence();
+      cacheline_flush(leaf_buf.sort_pvalue(pos));
+      memory_fence();
       return this;
     }
 
@@ -38,9 +38,9 @@ CLevel::Node* CLevel::Node::Put(MemControl* mem, uint64_t key, uint64_t value, N
       // set next pointer
       memcpy(new_node->next, next, sizeof(next));
       // persist new node
-      flush(new_node);
-      flush((uint8_t*)new_node+64);
-      fence();
+      cacheline_flush(new_node);
+      cacheline_flush((uint8_t*)new_node+64);
+      memory_fence();
 
       if (parent == nullptr) {
         Node* new_root = mem->NewNode(Type::INDEX, leaf_buf.suffix_bytes);
@@ -50,9 +50,9 @@ CLevel::Node* CLevel::Node::Put(MemControl* mem, uint64_t key, uint64_t value, N
         memcpy(new_root->first_child, &tmp, sizeof(new_root->first_child));
         new_root->PutChild(mem, new_node->leaf_buf.sort_key(0, key), new_node);
         // flush root
-        flush(new_root);
-        flush((uint8_t*)new_root+64);
-        fence();
+        cacheline_flush(new_root);
+        cacheline_flush((uint8_t*)new_root+64);
+        memory_fence();
 
         SetNext(mem->BaseAddr(), new_node);
         leaf_buf.DeleteData(leaf_buf.entries/2);
@@ -82,9 +82,9 @@ CLevel::Node* CLevel::Node::Put(MemControl* mem, uint64_t key, uint64_t value, N
         // set new_node.first_child
         memcpy(new_node->first_child, index_buf.sort_pvalue((index_buf.entries+1)/2-1), sizeof(new_node->first_child));
         // persist new_node
-        flush(new_node);
-        flush((uint8_t*)new_node+64);
-        fence();
+        cacheline_flush(new_node);
+        cacheline_flush((uint8_t*)new_node+64);
+        memory_fence();
 
         if (parent == nullptr) {
           Node* new_root = mem->NewNode(Type::INDEX, index_buf.suffix_bytes);
@@ -92,9 +92,9 @@ CLevel::Node* CLevel::Node::Put(MemControl* mem, uint64_t key, uint64_t value, N
           memcpy(new_root->first_child, &tmp, sizeof(new_root->first_child));
           new_root->PutChild(mem, index_buf.sort_key((index_buf.entries+1)/2-1, key), new_node);
           // flush root
-          flush(new_root);
-          flush((uint8_t*)new_root+64);
-          fence();
+          cacheline_flush(new_root);
+          cacheline_flush((uint8_t*)new_root+64);
+          memory_fence();
 
           index_buf.DeleteData((index_buf.entries+1)/2-1);
           return new_root;
@@ -163,23 +163,23 @@ void CLevel::Setup(MemControl* mem, int suffix_len) {
   ((Node*)new_root)->next[0] = 1;
   new_root -= mem->BaseAddr();
   memcpy(root_, &new_root, sizeof(root_));
-  flush(&root_);
-  fence();
+  cacheline_flush(&root_);
+  memory_fence();
 }
 
 void CLevel::Setup(MemControl* mem, KVBuffer<112,8>& blevel_buf) {
   Node* new_root = mem->NewNode(Node::Type::LEAF, blevel_buf.suffix_bytes);
   assert(sizeof(new_root->leaf_buf.buf) == sizeof(blevel_buf.buf));
   new_root->leaf_buf.FromKVBuffer(blevel_buf);
-  flush(new_root);
-  flush((uint8_t*)new_root+64);
+  cacheline_flush(new_root);
+  cacheline_flush((uint8_t*)new_root+64);
 
   // set next to NULL: set LSB to 1
   new_root->next[0] = 1;
   new_root = (Node*)((uint64_t)new_root - mem->BaseAddr());
   memcpy(root_, &new_root, sizeof(root_));
-  flush(&root_);
-  fence();
+  cacheline_flush(&root_);
+  memory_fence();
 }
 
 bool CLevel::Put(MemControl* mem, uint64_t key, uint64_t value) {
@@ -188,8 +188,8 @@ bool CLevel::Put(MemControl* mem, uint64_t key, uint64_t value) {
   if (old_root != new_root) {
     new_root = (Node*)((uint64_t)new_root - mem->BaseAddr());
     memcpy(root_, &new_root, sizeof(root_));
-    flush(&root_);
-    fence();
+    cacheline_flush(&root_);
+    memory_fence();
   }
   return true;
 }

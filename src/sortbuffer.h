@@ -160,8 +160,8 @@ struct SortBuffer {
   ALWAYS_INLINE void Clear() {
     header = (header & 0xFFFFUL) | 0x0123456789AB'0000UL;
     entries = 0;
-    flush(&header);
-    fence();
+    cacheline_flush(&header);
+    memory_fence();
   }
 
   ALWAYS_INLINE bool Put(int pos, void* new_key, uint64_t value) {
@@ -171,16 +171,16 @@ struct SortBuffer {
     memcpy(pkey(target_idx), new_key, suffix_bytes);
     header = circular_lshift(header, 16+4*pos, 4);
     entries++;
-    flush(pvalue(target_idx));
-    flush(&header);
-    fence();
+    cacheline_flush(pvalue(target_idx));
+    cacheline_flush(&header);
+    memory_fence();
     return true;
   }
 
   ALWAYS_INLINE bool Update(int pos, uint64_t value) {
     memcpy(sort_pvalue(pos), &value, value_size);
-    flush(sort_pvalue(pos));
-    fence();
+    cacheline_flush(sort_pvalue(pos));
+    memory_fence();
     return true;
   }
 
@@ -191,8 +191,8 @@ struct SortBuffer {
   ALWAYS_INLINE bool Delete(int pos) {
     header = circular_rshift(header, 16+4*pos, 4);
     entries--;
-    flush(&header);
-    fence();
+    cacheline_flush(&header);
+    memory_fence();
     return true;
   }
 
