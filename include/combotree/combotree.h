@@ -55,6 +55,7 @@ class ComboTree {
    public:
     Iter(const ComboTree* tree);
     Iter(const ComboTree* tree, uint64_t start_key);
+    ~Iter();
 
     uint64_t key() const;
     uint64_t value() const;
@@ -69,6 +70,7 @@ class ComboTree {
    public:
     NoSortIter(const ComboTree* tree);
     NoSortIter(const ComboTree* tree, uint64_t start_key);
+    ~NoSortIter();
 
     uint64_t key() const;
     uint64_t value() const;

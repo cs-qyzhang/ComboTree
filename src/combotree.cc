@@ -537,6 +537,7 @@ class ComboTree::NoSortIterImpl {
 ComboTree::Iter::Iter(const ComboTree* tree) : pimpl_(new IterImpl(tree)) {}
 ComboTree::Iter::Iter(const ComboTree* tree, uint64_t start_key)
   : pimpl_(new IterImpl(tree, start_key)) {}
+ComboTree::Iter::~Iter() { if (pimpl_) delete pimpl_; }
 uint64_t ComboTree::Iter::key() const   { return pimpl_->key(); }
 uint64_t ComboTree::Iter::value() const { return pimpl_->value(); }
 bool ComboTree::Iter::next()            { return pimpl_->next(); }
@@ -547,6 +548,7 @@ bool ComboTree::Iter::end() const       { return pimpl_->end(); }
 ComboTree::NoSortIter::NoSortIter(const ComboTree* tree) : pimpl_(new NoSortIterImpl(tree)) {}
 ComboTree::NoSortIter::NoSortIter(const ComboTree* tree, uint64_t start_key)
   : pimpl_(new NoSortIterImpl(tree, start_key)) {}
+ComboTree::NoSortIter::~NoSortIter() { if (pimpl_) delete pimpl_; }
 uint64_t ComboTree::NoSortIter::key() const   { return pimpl_->key(); }
 uint64_t ComboTree::NoSortIter::value() const { return pimpl_->value(); }
 bool ComboTree::NoSortIter::next()            { return pimpl_->next(); }
