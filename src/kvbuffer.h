@@ -68,7 +68,7 @@ struct KVBuffer {
 
   ALWAYS_INLINE uint64_t value(int idx) const {
     // the const bit mask will be generated during compile
-    return *(uint64_t*)pvalue(idx) & (0xFFFFFFFFFFFFFFFFUL >> ((8-value_size)*8));
+    return *(uint64_t*)pvalue(idx) & (UINT64_MAX >> ((8-value_size)*8));
   }
 
   int Find(uint64_t target, bool& find) const {
@@ -90,7 +90,7 @@ struct KVBuffer {
     find = false;
     return left;
 #else
-    for (int i = 0; i < entries; ++i) {
+    for (int i = entries-1; i >= 0; --i) {
       if (!memcmp(pkey(i), &target, suffix_bytes)) {
         find = true;
         return i;
@@ -136,8 +136,8 @@ struct KVBuffer {
 
   ALWAYS_INLINE void Clear() {
     entries = 0;
-    flush(&meta);
-    fence();
+    cacheline_flush(&meta);
+    memory_fence();
   }
 
   ALWAYS_INLINE bool Put(int pos, void* new_key, uint64_t value) {
@@ -147,22 +147,28 @@ struct KVBuffer {
 
     memcpy(pvalue(pos), &value, value_size);
     memcpy(pkey(pos), new_key, suffix_bytes);
-
     entries++;
-
-    flush(&meta);
-    flush(pvalue(pos));
-    fence();
+    cacheline_flush(pvalue(pos));
+    cacheline_flush(&meta);
+    memory_fence();
     return true;
 #else
+    // pos == entries
     memcpy(pkey(pos), new_key, suffix_bytes);
     memcpy(pvalue(pos), &value, value_size);
     entries++;
-    flush(pvalue(pos));
-    fence();
-    flush(&meta);
+    cacheline_flush(pvalue(pos));
+    cacheline_flush(&meta);
+    memory_fence();
     return true;
 #endif // BUF_SORT
+  }
+
+  ALWAYS_INLINE bool Update(int pos, uint64_t value) {
+    memcpy(pvalue(pos), &value, value_size);
+    cacheline_flush(pvalue(pos));
+    memory_fence();
+    return true;
   }
 
   ALWAYS_INLINE bool Put(int pos, uint64_t new_key, uint64_t value) {
@@ -175,9 +181,9 @@ struct KVBuffer {
     memmove(pkey(pos), pkey(pos+1), suffix_bytes*(entries-pos-1));
     memmove(pvalue(entries-2), pvalue(entries-1), value_size*(entries-pos-1));
     entries--;
-    flush(&meta);
-    flush(pvalue(pos));
-    fence();
+    cacheline_flush(&meta);
+    cacheline_flush(pvalue(pos));
+    memory_fence();
     return true;
 #else
     if (pos != entries - 1) {
@@ -185,14 +191,14 @@ struct KVBuffer {
       // if system crashed after key move and before update
       // of entries, it will be fixed during recovery.
       memcpy(pkey(pos), pkey(entries - 1), suffix_bytes);
+      cacheline_flush(pkey(pos));
+      memory_fence();
       memcpy(pvalue(pos), pvalue(entries - 1), value_size);
-      flush(pkey(pos));
-      flush(pvalue(pos));
-      fence();
+      cacheline_flush(pvalue(pos));
     }
     entries--;
-    flush(&meta);
-    fence();
+    cacheline_flush(&meta);
+    memory_fence();
     return true;
 #endif // BUF_SORT
   }
@@ -209,15 +215,19 @@ struct KVBuffer {
   }
 #else
   int GetSortedIndex(int sorted_index[buf_size/9]) const {
-    uint64_t keys[buf_size/9];
-    for (int i = 0; i < entries; ++i) {
-      keys[i] = key(i, 0);  // prefix does not matter
-      sorted_index[i] = i;
-    }
-    std::sort(&sorted_index[0], &sorted_index[entries],
-      [&keys](uint64_t a, uint64_t b) { return keys[a] < keys[b]; });
-    for (int i = 0; i < entries - 1; ++i) {
-      assert(keys[sorted_index[i]] < keys[sorted_index[i + 1]]);
+    if (suffix_bytes == 1) {
+      for (int i = 0; i < entries; ++i)
+        sorted_index[i] = i;
+      std::sort(&sorted_index[0], &sorted_index[entries],
+        [&](uint64_t a, uint64_t b) { return buf[a] < buf[b]; });
+    } else {
+      uint64_t keys[buf_size/9];
+      for (int i = 0; i < entries; ++i) {
+        keys[i] = key(i, 0);  // prefix does not matter
+        sorted_index[i] = i;
+      }
+      std::sort(&sorted_index[0], &sorted_index[entries],
+        [&keys](uint64_t a, uint64_t b) { return keys[a] < keys[b]; });
     }
     return entries;
   }

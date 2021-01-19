@@ -1,10 +1,12 @@
 #pragma once
 
 #cmakedefine SERVER
+#cmakedefine USE_LIBPMEM
 #cmakedefine BUF_SORT
 #cmakedefine STREAMING_STORE
 #cmakedefine STREAMING_LOAD
 #cmakedefine NO_LOCK
+#cmakedefine BRANGE
 
 #ifndef CLEVEL_PMEM_FILE_SIZE
 #define CLEVEL_PMEM_FILE_SIZE @CLEVEL_PMEM_FILE_SIZE@
@@ -14,6 +16,9 @@
 #endif
 #ifndef BLEVEL_PMEM_FILE
 #define BLEVEL_PMEM_FILE      @BLEVEL_PMEM_FILE@
+#endif
+#ifndef ALEVEL_PMEM_FILE
+#define ALEVEL_PMEM_FILE      @ALEVEL_PMEM_FILE@
 #endif
 #ifndef BLEVEL_EXPAND_BUF_KEY
 #define BLEVEL_EXPAND_BUF_KEY @BLEVEL_EXPAND_BUF_KEY@
@@ -29,4 +34,10 @@
 #endif
 #ifndef ENTRY_SIZE_FACTOR
 #define ENTRY_SIZE_FACTOR     @ENTRY_SIZE_FACTOR@
+#endif
+#if defined(BRANGE) && !defined(EXPAND_THREADS)
+#define EXPAND_THREADS        @EXPAND_THREADS@
+#endif
+#if defined(BRANGE) && EXPAND_THREADS == 0
+#undef BRANGE
 #endif

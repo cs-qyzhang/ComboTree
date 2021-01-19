@@ -40,8 +40,6 @@ inline __attribute__((always_inline)) const char* level_string__(Debug level) {
 
 }  // anonymous namespace
 
-#ifndef NDEBUG
-
 #define LOG(level, format, ...)                                        \
   do {                                                                 \
     std::lock_guard<std::mutex> lock(log_mutex);                       \
@@ -63,18 +61,5 @@ class Timer {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_;
   std::chrono::time_point<std::chrono::high_resolution_clock> end_;
 };
-
-#elif defined(NDEBUG)
-
-#define LOG(level, format, ...)
-
-// microseconds timer
-class Timer {
- public:
-  void Start() {}
-  double End() { return 0.0; }
-};
-
-#endif  // NDEBUG
 
 }  // namespace combotree
